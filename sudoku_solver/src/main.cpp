@@ -144,17 +144,17 @@ int main(int argc, char *argv[]){
             Mat cellImg = img(cellROI);
 
             Mat digit = ImgProc::invertImg(cellImg);
-            cv::imshow("digit", digit);
+//            cv::imshow("digit", digit);
 
             // work on binary image
             Mat binaryImg;
             threshold(digit, binaryImg, mean(digit)[0], 255, THRESH_BINARY);
-            cv::imshow("binaryImg", binaryImg);
+//            cv::imshow("binaryImg", binaryImg);
 
             Mat clean;
             removeEdges(binaryImg, clean);
-            cv::namedWindow("no edges", cv::WINDOW_NORMAL | cv::WINDOW_KEEPRATIO | cv::WINDOW_GUI_EXPANDED);
-            cv::imshow("no edges", clean);
+//            cv::namedWindow("no edges", cv::WINDOW_NORMAL | cv::WINDOW_KEEPRATIO | cv::WINDOW_GUI_EXPANDED);
+//            cv::imshow("no edges", clean);
 
             double minVal, maxVal; 
             Point minLoc, maxLoc; 
@@ -193,9 +193,10 @@ int main(int argc, char *argv[]){
                 }
                 possibleGames.insert(possibleGames.end(), newPossibleGames.begin(), newPossibleGames.end() );
             }
-            waitKey(0);
+            //waitKey(0);
         }
     }
+    cout << "N total games " <<  possibleGames.size() << endl;
     //destroyAllWindows();
 
     // remove invalid grids
@@ -206,10 +207,9 @@ int main(int argc, char *argv[]){
             ++it;
         }
     }
-    // remove duplicates
+    cout << "N valid games " <<  possibleGames.size() << endl;
     possibleGames.erase( unique( possibleGames.begin(), possibleGames.end() ), possibleGames.end() );
-
-    cout << "N possible valid games " <<  possibleGames.size() << endl;
+    cout << "N dedup valid games " <<  possibleGames.size() << endl;
     vector<Sudoku*> solvedGames;
     for(auto it = possibleGames.begin(); it != possibleGames.end();){
         bool solved = (*it).solve();
