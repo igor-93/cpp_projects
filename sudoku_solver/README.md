@@ -38,7 +38,7 @@ Inside of this folder the following is necessary:
 1. `mkdir build`
 1. `cd build`
 1. `cmake ..`
-1. `cmake --build .`
+1. `cd .. & cmake --build build/`
 
 ### Example run:
-from build folder: `./SudokuSolver ../data/sudoku10.png`
+from build folder: `build/SudokuSolver data/sudoku10.png`

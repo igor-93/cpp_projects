@@ -1,0 +1,7 @@
+.vscode
+.idea
+cmake-build-debug
+build
+debug
+mnist
+model.pt

@@ -14,25 +14,25 @@ class Sudoku{
 
     public:
         Sudoku();
-        Sudoku(vector<vector <int> > grid);
+        explicit Sudoku(vector<vector <int> >& grid);
         Sudoku(const Sudoku& other);
+        bool operator==(const Sudoku& other);
         bool fill(int row, int col, int value, double probability = UNASSIGNED);
         double getJoinProbability() const ;
         bool isValid() const;
         bool solve();
-        bool trySolve(vector<vector<int> >& grid);
+
         void print() const;
 
         int getValue(int row, int col) const {return grid[row][col];};
         float getProb(int row, int col) const {return probabilities[row][col];};
 
-        bool operator==(const Sudoku& other);
-
+        bool trySolve(vector<vector<int> >& grid);
         static const int N;
 
     private:
         bool solved;
-        int n_iters;
+        int nIters;
         vector<vector<int> > grid;
         vector<vector<double> > probabilities;
 

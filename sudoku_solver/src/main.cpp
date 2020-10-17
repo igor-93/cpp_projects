@@ -1,10 +1,7 @@
-#include <stdio.h>
 #include <iostream>
 #include <string>
-#include <sys/time.h>
 
 #include <opencv4/opencv2/core.hpp>
-#include <opencv4/opencv2/core/utility.hpp>
 #include <opencv4/opencv2/imgproc.hpp>
 #include <opencv4/opencv2/highgui.hpp>
 
@@ -14,11 +11,6 @@
 
 using namespace cv;
 using namespace std;
-
-Scalar blue(255, 0, 0);
-Scalar red(0, 0, 255);
-Scalar green(0, 255, 0);
-Scalar black(0, 0, 0);
 
 void testSudoku(){
     int o = UNASSIGNED;
@@ -47,51 +39,55 @@ void testMnist(){
     m.testLibTorch();
 }
 
-bool isHorizontalOrVertical(Vec2f line){
-    float deg = line[1] / CV_PI * 180.0;
-    bool result = false;
-    
-    if((80 < deg && deg < 100) || (170 < deg && deg < 190) || (260 < deg && deg < 280)){
-        result = true;
-    }
-    if(deg < 10 || deg > 350){
-        result = true;
-    }
+//bool isHorizontalOrVertical(Vec2f line){
+//    double deg = line[1] / CV_PI * 180.0;
+//    bool result = false;
+//
+//    if((80 < deg && deg < 100) || (170 < deg && deg < 190) || (260 < deg && deg < 280)){
+//        result = true;
+//    }
+//    if(deg < 10 || deg > 350){
+//        result = true;
+//    }
+//
+//    cout << "deg: " << deg << " isHorizontalOrVertical: " << result << endl;
+//    return result;
+//}
 
-    cout << "deg: " << deg << " isHorizontalOrVertical: " << result << endl;
-    return result;
-}
+//void drawLines(const Mat& cdst, const vector<Vec2f>& lines){
+//    // Draw the lines
+//    for(const auto & i : lines){
+//        float rho = i[0], theta = i[1];
+//        printf("Rho = %.4f, Theta = %.4f \n", rho, theta);
+//        bool to_keep = isHorizontalOrVertical(i);
+//        Point pt1, pt2;
+//        double a = cos(theta), b = sin(theta);
+//        double x0 = a*rho, y0 = b*rho;
+//        pt1.x = cvRound(x0 + 1000*(-b));
+//        pt1.y = cvRound(y0 + 1000*(a));
+//        pt2.x = cvRound(x0 - 1000*(-b));
+//        pt2.y = cvRound(y0 - 1000*(a));
+//        Scalar c(0, 0, 255);
+//        if(to_keep)
+//            c = Scalar(255, 0, 0);
+//        line(cdst, pt1, pt2, c, 1, LINE_AA);
+//    }
+//}
 
-void drawLines(const Mat& cdst, const vector<Vec2f>& lines){
-    // Draw the lines
-    for( size_t i = 0; i < lines.size(); i++ )
-    {
-        float rho = lines[i][0], theta = lines[i][1];
-        printf("Rho = %.4f, Theta = %.4f \n", rho, theta);
-        bool to_keep = isHorizontalOrVertical(lines[i]);
-        Point pt1, pt2;
-        double a = cos(theta), b = sin(theta);
-        double x0 = a*rho, y0 = b*rho;
-        pt1.x = cvRound(x0 + 1000*(-b));
-        pt1.y = cvRound(y0 + 1000*(a));
-        pt2.x = cvRound(x0 - 1000*(-b));
-        pt2.y = cvRound(y0 - 1000*(a));
-        Scalar c(0, 0, 255);
-        if(to_keep) 
-            c = Scalar(255, 0, 0);
-        line(cdst, pt1, pt2, c, 1, LINE_AA);
-    }
-}
-
-void cutEdges(Mat& img, Mat& binaryImg){
+void removeEdges(Mat& img, Mat& binaryImg){
+    // work on binary image
     threshold(img, binaryImg, mean(img)[0], 255, THRESH_BINARY);
 
+    // flood-fill from the edges
     for(int i=0;i<img.size().height; i++){
-        for(int j=0;j<img.size().width; j++){
-            if(i == 0 || j == 0 || i == img.size().height-1 || j == img.size().width-1){
+        if(i == 0 || i == img.size().height-1) {
+            for (int j = 0; j < img.size().width; j++) {
                 floodFill(binaryImg, cv::Point(j, i), Scalar(0));
             }
-        }   
+        } else{
+            floodFill(binaryImg, cv::Point(0, i), Scalar(0));
+            floodFill(binaryImg, cv::Point(img.size().width - 1, i), Scalar(0));
+        }
     }
 } 
 
@@ -99,8 +95,8 @@ void centerAndCrop(Mat& img, Mat& centered){
     Point2i center(0,0);
     float cnt = 0;
 
-    for(int i=0;i<img.size().height; i++){
-        for(int j=0;j<img.size().width; j++){
+    for(int i=0;i<img.size().width; i++){
+        for(int j=0;j<img.size().height; j++){
             int val = img.at<uchar>(i, j);
             if(val> 0){
                 center.x += j;
@@ -109,7 +105,6 @@ void centerAndCrop(Mat& img, Mat& centered){
             }
         }   
     }
-
     center.x = (float)(center.x) / cnt;
     center.y = (float)(center.y) / cnt;
 
@@ -123,6 +118,10 @@ void centerAndCrop(Mat& img, Mat& centered){
 
 void drawResult(const Mat& img, Mat& drawing, const vector<vector<Rect> >& cells, const Sudoku& digits){
     cvtColor(img, drawing, COLOR_GRAY2RGB);
+
+    Scalar blue(255, 0, 0);
+    Scalar red(0, 0, 255);
+    Scalar green(0, 255, 0);
 
     for (int row=0; row<Sudoku::N; row++) { 
         for (int col=0; col<Sudoku::N; col++){
@@ -154,15 +153,13 @@ int main(int argc, char *argv[]){
      *     DONE
      *  4. connect the computer camera for real-time detection
      */
-
-    cout << "argc: " << argc << endl;
     if(argc < 2){
-        cout << "Please provide sudoku image to solve." << endl;
-        throw 1;
+        cout << "Please provide Sudoku image to solve." << endl;
+        return -1;
     }
-
     Mat img = imread(argv[1], IMREAD_GRAYSCALE);
-    
+
+    cout << "Instantiating processor and neural-net..." << endl;
     ImgProc processor(img);
     MnistModel model = MnistModel();
     // model.trainModel();
@@ -174,23 +171,22 @@ int main(int argc, char *argv[]){
     vector<vector<cv::Rect> > sudokuGrid = processor.getSudokuCells();
 
     vector<Sudoku> possibleGames = vector<Sudoku>();
-    possibleGames.push_back(Sudoku());
+    possibleGames.emplace_back();
 
-    for(int i=0; i<9; i++){
-        for(int j=0; j<9; j++){
-            cout << "ROI at [" << i << "," << j << "]: " << endl;
+    cout << "Extracting digits from the Sudoku cells..." << endl;
+    for(int i=0; i<Sudoku::N; i++){
+        for(int j=0; j<Sudoku::N; j++){
             Rect cellROI = sudokuGrid[i][j];
             Mat cellImg = img(cellROI);
 
             Mat digit = ImgProc::invertImg(cellImg);
             Mat clean;
-            cutEdges(digit, clean);
+            removeEdges(digit, clean);
 
             double minVal, maxVal; 
             Point minLoc, maxLoc; 
             minMaxLoc(clean, &minVal, &maxVal, &minLoc, &maxLoc);
             if(minVal == maxVal){
-                cout << "no digit found, skipping" << endl;
                 continue;
             }
 
@@ -208,27 +204,25 @@ int main(int argc, char *argv[]){
 
             if(recognizedDigits[0].second >= MnistModel::acceptanceThreshold){
                 cout << "Definitive digit: " << recognizedDigits[0].first << " with prob: " << recognizedDigits[0].second << endl;
-                for(int g=0; g<possibleGames.size(); g++){
-                    possibleGames[g].fill(i, j, recognizedDigits[0].first, recognizedDigits[0].second);
+                for(auto & possibleGame : possibleGames){
+                    possibleGame.fill(i, j, recognizedDigits[0].first, recognizedDigits[0].second);
                 }
             } else{
                 cout << "Possible digits: " << recognizedDigits[0] << " and " << recognizedDigits[1] << " and " << recognizedDigits[2] << endl;
                 vector<Sudoku> newPossibleGames = vector<Sudoku>();
-                for(int g=0; g<possibleGames.size(); g++){
+                for(auto & possibleGame : possibleGames){
                     for(int p=1; p<recognizedDigits.size(); p++){
-                        Sudoku newGame(possibleGames[g]);
+                        Sudoku newGame(possibleGame);
                         newGame.fill(i, j, recognizedDigits[p].first, recognizedDigits[p].second);
                         newPossibleGames.push_back(newGame);
                     }
-                    possibleGames[g].fill(i, j, recognizedDigits[0].first, recognizedDigits[0].second);
+                    possibleGame.fill(i, j, recognizedDigits[0].first, recognizedDigits[0].second);
                 }
                 possibleGames.insert(possibleGames.end(), newPossibleGames.begin(), newPossibleGames.end() );
             }
-
             //waitKey(0);
         }
     }
-
     //destroyAllWindows();
 
     // remove invalid grids
@@ -245,13 +239,8 @@ int main(int argc, char *argv[]){
     cout << "N possible valid games " <<  possibleGames.size() << endl;
     vector<Sudoku*> solvedGames;
     for(auto it = possibleGames.begin(); it != possibleGames.end();){
-        (*it).print();
-        cout << endl;
         bool solved = (*it).solve();
         if(solved){
-            cout << "*** SOLVED: ***" << endl;
-            (*it).print();
-            cout << endl;
             solvedGames.push_back(&(*it));
         }
         ++it;

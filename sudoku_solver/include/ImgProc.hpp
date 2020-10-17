@@ -1,6 +1,7 @@
 #ifndef IMGPROC_HPP
 #define IMGPROC_HPP
 
+#include <iostream>
 #include "vector"
 #include <opencv4/opencv2/core.hpp>
 #include <opencv4/opencv2/core/utility.hpp>
@@ -12,10 +13,10 @@ using namespace std;
 class ImgProc{
 
     public:
-        ImgProc(const cv::Mat& img);
+        explicit ImgProc(const cv::Mat& img);
         void run();
-        cv::Mat getProcessedImg();
-        vector<vector<cv::Rect> > getSudokuCells();
+        // cv::Mat getProcessedImg();
+        vector<vector<cv::Rect> > getSudokuCells() const;
 
         static cv::Mat invertImg(const cv::Mat& input);
         static cv::Rect expand(const cv::Rect& rect, float by = 0.05);

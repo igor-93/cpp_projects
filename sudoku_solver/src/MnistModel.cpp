@@ -3,11 +3,10 @@
 using namespace std;
 using namespace torch;
 
-const string MnistModel::dataPath = "./mnist";
-const string MnistModel::modelPath = "./model.pt";
+
 const int MnistModel::trainBatchSize = 64;
 const int MnistModel::testBatchSize = 512;
-const int MnistModel::numberOfEpochs = 2; // 50
+const int MnistModel::numberOfEpochs = 10; // 50
 const int MnistModel::logInterval = 10;
 const int MnistModel::nClasses = 10;
 const float MnistModel::dataMean = 0.1307;
@@ -45,7 +44,7 @@ nn::Sequential MnistModel::getModel(){
         nn::Dropout(nn::DropoutOptions().p(0.5)),
         nn::Linear(25 * 128, 256),
         nn::LeakyReLU(nn::LeakyReLUOptions().negative_slope(0.2)),
-        nn::Linear(256, this->nClasses),
+        nn::Linear(256, MnistModel::nClasses),
         nn::LogSoftmax(nn::LogSoftmaxOptions(1))
     );  
     discriminator->to(device);
@@ -138,23 +137,21 @@ void MnistModel::trainModel(){
 
 cv::Mat MnistModel::convertImg(Tensor input){
     input = input.to(torch::kCPU).squeeze();
-    // cout << "sizes: " << input.sizes() << endl;
-    // cout << "type: " << input.scalar_type() << endl;
     
     int height = input.sizes()[0];
     int width = input.sizes()[1];
 
-    float* temp_arr = input.data_ptr<float>();
+    auto* temp_arr = input.data_ptr<float>();
 	
     cv::Mat resultImg(height, width, CV_32F);
     memcpy((void *) resultImg.data, temp_arr, sizeof(float) * input.numel());
     return resultImg;
 }
 
-Tensor MnistModel::convertImg(cv::Mat input){
+Tensor MnistModel::convertImg(const cv::Mat& input){
     if(input.channels() != 1){
         cout << "image has more than 1 channels: " << input.channels() << endl;
-        throw -1;
+        throw exception();
     }
     // cv::Mat imgFloat;
     // input.convertTo(imgFloat, CV_32FC1, 1.0f / 255.0f);
@@ -191,7 +188,7 @@ vector<pair<int, float> > MnistModel::inferClass(const cv::Mat& digit){
 
     Tensor netInput = convertImg(floatImg).to(device);;
     Tensor output = torch::exp(net->forward(netInput)).to(kCPU);
-    float* probs = output.data_ptr<float>();
+    auto* probs = output.data_ptr<float>();
 
     // get top 3 most likely digits
     auto cmp = [](pair<int, float> left, pair<int, float> right) { return left.second < right.second; };

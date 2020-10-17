@@ -56,7 +56,6 @@ bool isSudokuSubRect(const Rect& rBig, const Rect& rSmall){
             }
         }
     }
-    // cout << "not sudoku sub rect: " << rBig << ", " << rSmall << endl;
     return false;
 }
 
@@ -66,15 +65,14 @@ vector<Rect> findSudokuROIs(const vector<vector<Point> >& contours, const vector
      * I.e. one big rectange and at least minPlausibleChildren smaller rectangles inside 
      * that are 1/3 in height and width of the big one.
      */
-    vector<Rect> rects;
-    for(int i = 0; i < contours.size(); i++){
-        Rect rect = boundingRect(contours[i]);
-        rects.push_back(rect);
+    vector<Rect> rects(contours.size());
+    for(int i=0; i<contours.size(); i++){
+        rects[i] = boundingRect(contours[i]);
     }
 
     int minPlausibleChildren = 4;
     vector<pair<int, Rect> > result;
-    for(int i = 0; i < contours.size(); i++){
+    for(int i = 0; i < rects.size(); i++){
         if(!isSquare(rects[i])) continue;
         int child = hierarchy[i][2];
         int nPlausibleChildren = 0;
@@ -88,10 +86,8 @@ vector<Rect> findSudokuROIs(const vector<vector<Point> >& contours, const vector
             //cout << "found " << nPlausibleChildren << " plausible children for rect: " << rects[i] << endl;
             pair<int, Rect> P =make_pair(nPlausibleChildren, rects[i]);
             result.push_back(P);
-        } else{
-            // cout << "checking grandchildren..." << endl;
-            int child = hierarchy[hierarchy[i][2]][2];
-            // cout << child << endl;
+        } else if(hierarchy[i][2] > -1){
+            child = hierarchy[hierarchy[i][2]][2];
             nPlausibleChildren = 0;
             while(child >= 0){
                 if(isSudokuSubRect(rects[i], rects[child])){
@@ -130,11 +126,11 @@ Rect ImgProc::expand(const Rect& rect, float by){
 }
 
 void ImgProc::crop(Mat& img, Mat& cropped, float by){
-    int new_w = img.size().width * (1.0 - 2.0 * by); 
-    int new_h = img.size().height * (1.0 - 2.0 * by); 
+    int new_w = (int)(img.size().width * (1.0 - 2.0 * by));
+    int new_h = (int)(img.size().height * (1.0 - 2.0 * by));
 
-    int new_x = by * (float)img.size().width; 
-    int new_y = by * (float)img.size().height; 
+    int new_x = (int)(by * (float)img.size().width);
+    int new_y = (int)(by * (float)img.size().height);
 
     Rect roi = Rect(new_x, new_y, new_w, new_h);
     cropped = img(roi);
@@ -144,21 +140,21 @@ int splitSudokuROI(const Rect& sudokuROI, vector<vector<Rect> >& smallROIs, vect
     /** 
      * The function takes sudokuROI and splits it into 3x3 and 9x9 grid by diving it into equal subsets
      */
-    int smallROIheight = (int)(sudokuROI.height / 3.0);
-    int smallROIwidth = (int)(sudokuROI.width / 3.0);
-    int cellheight = (int)(sudokuROI.height / 9.0);
-    int cellwidth = (int)(sudokuROI.width / 9.0);
+    int smallRoiHeight = (int)(sudokuROI.height / 3.0);
+    int smallRoiWidth = (int)(sudokuROI.width / 3.0);
+    int cellHeight = (int)(sudokuROI.height / 9.0);
+    int cellWidth = (int)(sudokuROI.width / 9.0);
     for(int i_33=0; i_33<3; i_33++){
         for(int j_33=0; j_33<3; j_33++){
             int x = sudokuROI.x + i_33 * (int)(sudokuROI.width / 3.0);
             int y = sudokuROI.y + j_33 * (int)(sudokuROI.height / 3.0);
-            Rect smallROI(x, y, smallROIwidth, smallROIheight);
+            Rect smallROI(x, y, smallRoiWidth, smallRoiHeight);
             smallROIs[i_33][j_33] = smallROI;
             for(int i=0; i<3; i++){
                 for(int j=0; j<3; j++){
-                    int x = smallROI.x + i * (int)(smallROI.width / 3.0);
-                    int y = smallROI.y + j * (int)(smallROI.height / 3.0);
-                    Rect cell(x, y, cellwidth, cellheight);
+                    x = smallROI.x + i * (int)(smallROI.width / 3.0);
+                    y = smallROI.y + j * (int)(smallROI.height / 3.0);
+                    Rect cell(x, y, cellWidth, cellHeight);
                     cells[i_33 * 3 + i][j_33 * 3 + j] = ImgProc::expand(cell);
                 }
             }
@@ -178,9 +174,9 @@ ImgProc::ImgProc(const Mat& img){
 
 void ImgProc::processImg(){
     Mat inv = invertImg(this->origImg);
-    //imshow("invert_image", inv);
+    // imshow("invert_image", inv);
     Mat eroded = erosion(inv);
-    //imshow("eroded", eroded);
+    // imshow("eroded", eroded);
 
     Mat cannyImg = cannyEdge(eroded);
     imshow("cannyImg", cannyImg);
@@ -199,15 +195,11 @@ void ImgProc::findSudokuGrid(){
 
     Mat origColored;
     cvtColor(origImg, origColored, COLOR_GRAY2RGB);
-    for(int i = 0; i < contours.size(); i++){
-        Rect rect = boundingRect(contours[i]);
-        // cout << "rect: " << rect << endl;
-        // cout << "hierarchy: " << hierarchy[i] << endl;
-        // cout << endl;
+    for(auto & contour : contours){
+        Rect rect = boundingRect(contour);
         cv::Scalar color(rand()*255, rand()*255, rand()*255);
         rectangle(origColored, rect, color, 1);
     }
-        
 
     vector<Rect> sudokuROIs = findSudokuROIs(contours, hierarchy);
     // best sudoku ROI is the one with most plausible children
@@ -239,10 +231,6 @@ void ImgProc::run(){
     findSudokuGrid();
 }
 
-Mat ImgProc::getProcessedImg(){
-    return processedImg.clone();
-}
-
-vector<vector<cv::Rect> > ImgProc::getSudokuCells(){
+vector<vector<cv::Rect> > ImgProc::getSudokuCells() const{
     return sudokuCells;
 }

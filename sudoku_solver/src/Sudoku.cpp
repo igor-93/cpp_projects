@@ -49,19 +49,21 @@ Sudoku::Sudoku(){
     this->solved = false;
     this->grid = vector<vector <int> >(N, vector<int>(N, -1));
     this->probabilities = vector<vector <double> >(N, vector<double>(N, UNASSIGNED));
+    this->nIters = 0;
 }
 
-Sudoku::Sudoku(vector<vector <int> > grid){
+Sudoku::Sudoku(vector<vector <int> >& grid){
     this->solved = false;
     this->grid = grid;
     this->probabilities = vector<vector <double> >(N, vector<double>(N, UNASSIGNED));
+    this->nIters = 0;
 }
 
 Sudoku::Sudoku(const Sudoku& other){
     this->solved = other.solved;
     this->grid = other.grid;
     this->probabilities = other.probabilities;
-    this->n_iters = other.n_iters;
+    this->nIters = other.nIters;
 }
 
 bool Sudoku::fill(int row, int col, int value, double probability){
@@ -99,21 +101,21 @@ bool Sudoku::isValid() const {
 
 bool Sudoku::solve(){
     if(!isValid()){
-        throw -1;
+        cout << "Starting Sudoku puzzle is NOT valid." << endl;
+        throw exception();
     }
     if(this->solved)
         this->grid;
 
-    this->n_iters =0;
+    this->nIters =0;
     this->solved = this->trySolve(this->grid);
 
-    cout << "Is it solved? " << this->solved << endl;
-    cout << "Ran in " << this->n_iters << " iterations." << endl;
+    cout << "Ran in " << this->nIters << " iterations." << endl;
     return this->solved;
 }
 
 bool Sudoku::trySolve(vector<vector<int> >& grid){
-    this->n_iters++;
+    this->nIters++;
     int row, col;
     if(!findNextCell(grid, row, col)){
         return true; // done
@@ -124,11 +126,9 @@ bool Sudoku::trySolve(vector<vector<int> >& grid){
         // basic check to see if it makes sense to continue
         if(isValidEntry(grid, row, col, value)){
             grid[row][col] = value;
-
-            
             if(trySolve(grid))
                 return true;
-
+            // if cant solve, put it back to unassigned so the next round can try it out
             grid[row][col] = UNASSIGNED;
         }
     }

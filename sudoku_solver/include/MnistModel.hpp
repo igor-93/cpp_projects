@@ -20,10 +20,8 @@ class MnistModel{
         std::vector<std::pair<int, float> > inferClass(const cv::Mat& digit);
 
         static cv::Mat convertImg(torch::Tensor input);
-        static torch::Tensor convertImg(cv::Mat input);
+        static torch::Tensor convertImg(const cv::Mat& input);
 
-        static const std::string dataPath;
-        static const std::string modelPath;
         static const int trainBatchSize;
         static const int testBatchSize;
         static const int numberOfEpochs;
@@ -36,6 +34,8 @@ class MnistModel{
         static const float acceptanceThreshold;
 
     private:
+        const std::string dataPath = "./mnist";
+        const std::string modelPath = "./model.pt";
         torch::Device device = torch::Device(c10::DeviceType::CPU);
         torch::nn::Sequential net;
         bool readyForInference;
@@ -43,7 +43,8 @@ class MnistModel{
         torch::nn::Sequential getModel();
 
         template <typename DataLoader>
-        void trainEpoch(int32_t epoch, torch::nn::Sequential& model, DataLoader& data_loader, torch::optim::Optimizer& optimizer, size_t dataset_size);
+        void trainEpoch(int32_t epoch, torch::nn::Sequential& model, DataLoader& data_loader,
+                        torch::optim::Optimizer& optimizer, size_t dataset_size);
         template <typename DataLoader>
         void test(torch::nn::Sequential& model, DataLoader& data_loader, size_t dataset_size);
 
