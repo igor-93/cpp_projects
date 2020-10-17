@@ -1,12 +1,19 @@
 # Sudoku Solver
 
-Tiny program that solves Sudoko that it sees on the image. It comprises of 3 main steps:
-1. Recongize the sudoku grid:
-    - solved with openCV's findContour() and then picking the big square that has at least 4 smaller squares inside it that are valid for Sudoku
+Tiny program that solves Sudoko that it sees on the image. It comprises of few main steps:
+1. Recognize the sudoku grid:
+    - solved with openCV's findContour(). For each contour get the bounding box
+    - from all the bounding boxes, pick the one that has most intersections of 
+    HoughLines and has the smallest area in case of a tie
+    - to define each cell of Sudoku puzzle, 
+        - first assume its position relative to the whole puzzle
+        - expand it by 20% to include the corners
+        - since most or all of the corners are stored as intersections of Hough lines, 
+        use these to get maximum bounding box
+        - result is the actual cell bounded by the intersections
 1. Get each digit from Sudoku grid: 
-    - split the big square into 81 cells and for each cell remove edges, 
-    - discard if nothing inside, otherwise center around center of mass (here: digit)
-    - enlarge the digit
+    - remove the potential "frame" of the ROI of the cell by flood-filling the edges
+    - discard if nothing inside (neural-net is not trained to infer non-digit)
 1. Recognize the digit:
     - simple CNN with 2 conv layers and 2 fully-connected
     - pick top 3
@@ -15,7 +22,7 @@ Tiny program that solves Sudoko that it sees on the image. It comprises of 3 mai
     - discard all invalid starting puzzles
     - solve others with depth-first search algorithm
     - discard all that don't have solution
-1. Overlay infered digits and fill in the blank cells
+1. Overlay inferred digits and fill in the blank cells
 
 **ATTENTION: this is MVP version, meaning that each part works, but there is still lots of space for improvement.**
 
