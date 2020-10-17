@@ -39,45 +39,8 @@ void testMnist(){
     m.testLibTorch();
 }
 
-//bool isHorizontalOrVertical(Vec2f line){
-//    double deg = line[1] / CV_PI * 180.0;
-//    bool result = false;
-//
-//    if((80 < deg && deg < 100) || (170 < deg && deg < 190) || (260 < deg && deg < 280)){
-//        result = true;
-//    }
-//    if(deg < 10 || deg > 350){
-//        result = true;
-//    }
-//
-//    cout << "deg: " << deg << " isHorizontalOrVertical: " << result << endl;
-//    return result;
-//}
-
-//void drawLines(const Mat& cdst, const vector<Vec2f>& lines){
-//    // Draw the lines
-//    for(const auto & i : lines){
-//        float rho = i[0], theta = i[1];
-//        printf("Rho = %.4f, Theta = %.4f \n", rho, theta);
-//        bool to_keep = isHorizontalOrVertical(i);
-//        Point pt1, pt2;
-//        double a = cos(theta), b = sin(theta);
-//        double x0 = a*rho, y0 = b*rho;
-//        pt1.x = cvRound(x0 + 1000*(-b));
-//        pt1.y = cvRound(y0 + 1000*(a));
-//        pt2.x = cvRound(x0 - 1000*(-b));
-//        pt2.y = cvRound(y0 - 1000*(a));
-//        Scalar c(0, 0, 255);
-//        if(to_keep)
-//            c = Scalar(255, 0, 0);
-//        line(cdst, pt1, pt2, c, 1, LINE_AA);
-//    }
-//}
-
 void removeEdges(Mat& img, Mat& binaryImg){
-    // work on binary image
-    threshold(img, binaryImg, mean(img)[0], 255, THRESH_BINARY);
-
+    binaryImg = img.clone();
     // flood-fill from the edges
     for(int i=0;i<img.size().height; i++){
         if(i == 0 || i == img.size().height-1) {
@@ -112,7 +75,7 @@ void centerAndCrop(Mat& img, Mat& centered){
     int h = min(min(img.size().height, center.y * 2), (int)((img.size().height - center.y) * 2.0));
     Rect centerRect = Rect(center.x-w/2, center.y-h/2, w, h);
     centered = img(centerRect);
-    ImgProc::crop(centered, centered);
+    //ImgProc::crop(centered, centered, 0.01);
 } 
 
 
@@ -158,6 +121,7 @@ int main(int argc, char *argv[]){
         return -1;
     }
     Mat img = imread(argv[1], IMREAD_GRAYSCALE);
+    cout << "Image has size " << img.size() << ", with " << img.channels() << " channels." << endl;
 
     cout << "Instantiating processor and neural-net..." << endl;
     ImgProc processor(img);
@@ -180,8 +144,17 @@ int main(int argc, char *argv[]){
             Mat cellImg = img(cellROI);
 
             Mat digit = ImgProc::invertImg(cellImg);
+            cv::imshow("digit", digit);
+
+            // work on binary image
+            Mat binaryImg;
+            threshold(digit, binaryImg, mean(digit)[0], 255, THRESH_BINARY);
+            cv::imshow("binaryImg", binaryImg);
+
             Mat clean;
-            removeEdges(digit, clean);
+            removeEdges(binaryImg, clean);
+            cv::namedWindow("no edges", cv::WINDOW_NORMAL | cv::WINDOW_KEEPRATIO | cv::WINDOW_GUI_EXPANDED);
+            cv::imshow("no edges", clean);
 
             double minVal, maxVal; 
             Point minLoc, maxLoc; 
@@ -190,12 +163,12 @@ int main(int argc, char *argv[]){
                 continue;
             }
 
-            Mat centered;
-            centerAndCrop(clean, centered);
-            // cv::namedWindow("centered", cv::WINDOW_NORMAL | cv::WINDOW_KEEPRATIO | cv::WINDOW_GUI_EXPANDED);
-            // cv::imshow("centered", centered);
+//            Mat centered;
+//            centerAndCrop(clean, centered);
+//            cv::namedWindow("centered", cv::WINDOW_NORMAL | cv::WINDOW_KEEPRATIO | cv::WINDOW_GUI_EXPANDED);
+//            cv::imshow("centered", centered);
 
-            vector<pair<int, float> > recognizedDigits = model.inferClass(centered);
+            vector<pair<int, float> > recognizedDigits = model.inferClass(clean);
             // drop zeros since sudoku doesnt have them definitely
             for(auto it = recognizedDigits.begin(); it != recognizedDigits.end();){
                 if((*it).first == 0) it = recognizedDigits.erase(it); 
@@ -220,7 +193,7 @@ int main(int argc, char *argv[]){
                 }
                 possibleGames.insert(possibleGames.end(), newPossibleGames.begin(), newPossibleGames.end() );
             }
-            //waitKey(0);
+            waitKey(0);
         }
     }
     //destroyAllWindows();

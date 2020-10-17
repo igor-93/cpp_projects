@@ -19,17 +19,25 @@ class ImgProc{
         vector<vector<cv::Rect> > getSudokuCells() const;
 
         static cv::Mat invertImg(const cv::Mat& input);
-        static cv::Rect expand(const cv::Rect& rect, float by = 0.05);
-        static void crop(cv::Mat& img, cv::Mat& cropped, float by = 0.05);
+        static cv::Rect expand(const cv::Rect& rect, float by);
+        static void crop(cv::Mat& img, cv::Mat& cropped, float by = 0.02);
 
     private:
         cv::Mat origImg;
         cv::Mat processedImg;
+        vector<cv::Vec2f> houghLines;
+        vector<cv::Point2f> houghIntersections;
+        vector<cv::Point2i> kmeansIntersections;
         cv::Rect sudokuROI;
-        vector<vector<cv::Rect> > smallROIs;
         vector<vector<cv::Rect> > sudokuCells;
 
         void processImg();
+        cv::Mat houghExtraction(cv::Mat& img);
+        void calcHoughIntersections();
+
+        void splitSudokuROI();
+
+        cv::Rect findSudokuROI(const vector<vector<cv::Point> >& contours);
         void findSudokuGrid();
 
 };

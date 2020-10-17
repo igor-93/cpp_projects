@@ -10,8 +10,7 @@ Mat ImgProc::invertImg(const Mat& input){
 
 Mat erosion(const Mat& inputImg){
     Mat outputImg;
-    int erosionSize = 1;
-	Mat element = getStructuringElement(MORPH_RECT, Size(2 * erosionSize + 1, 2 * erosionSize + 1));
+	Mat element = getStructuringElement(MORPH_RECT, Size(3, 3));
 
 	erode(inputImg, outputImg, element);
 	return outputImg;
@@ -21,7 +20,7 @@ Mat dilation(const Mat& inputImg){
 	Mat outputImg;
 
     int dilationSize = 1;
-	Mat element = getStructuringElement(MORPH_RECT, Size(2 * dilationSize + 1, 2 * dilationSize + 1));
+	Mat element = getStructuringElement(MORPH_RECT, Size(3, 3));
 
 	dilate(inputImg, outputImg, element);
 	return outputImg;
@@ -29,14 +28,14 @@ Mat dilation(const Mat& inputImg){
 
 Mat cannyEdge(const Mat& inputImg){
 	Mat outputImg, midImg;
-
-    int blurSize = 3;
-	if(blurSize % 2 == 0)
-		blurSize = blurSize + 1;
-
-	blur(inputImg, midImg, Size(blurSize, blurSize));
+//
+//    int blurSize = 3;
+//	if(blurSize % 2 == 0)
+//		blurSize = blurSize + 1;
+//
+//	blur(inputImg, midImg, Size(blurSize, blurSize));
     double cannyThreshold = 100.0;
-	Canny(midImg, outputImg, cannyThreshold, cannyThreshold*2, 3);
+	Canny(inputImg, outputImg, cannyThreshold, cannyThreshold*2, 3);
 
 	return outputImg;
 }
@@ -59,10 +58,10 @@ bool isSudokuSubRect(const Rect& rBig, const Rect& rSmall){
     return false;
 }
 
-vector<Rect> findSudokuROIs(const vector<vector<Point> >& contours, const vector<Vec4i>& hierarchy){
+vector<Rect> findSudokuROIs_OLD(const vector<vector<Point> >& contours, const vector<Vec4i>& hierarchy){
     /**
      * Given the contours and their hierarchy, it looks for those whose ROIs make the most sense for sudoku.
-     * I.e. one big rectange and at least minPlausibleChildren smaller rectangles inside 
+     * I.e. one big rectange and at least minPlausibleChildren smaller rectangles inside
      * that are 1/3 in height and width of the big one.
      */
     vector<Rect> rects(contours.size());
@@ -102,6 +101,15 @@ vector<Rect> findSudokuROIs(const vector<vector<Point> >& contours, const vector
             }
         }
     }
+    if(result.empty()){
+        cout << "No Sudoku square found!" << endl;
+        cout << "rects and hierarchies: " << endl;
+        for(int i=0; i<rects.size(); i++){
+            cout << "    rect: " << rects[i] << endl;
+            cout << "    hier: " << hierarchy[i] << endl;
+        }
+        throw exception();
+    }
 
     // sort according to number of plausible children and then extract only rects
     sort(result.begin(), result.end(), [](auto &left, auto &right) {
@@ -115,12 +123,58 @@ vector<Rect> findSudokuROIs(const vector<vector<Point> >& contours, const vector
     return only_rect;
 }
 
-Rect ImgProc::expand(const Rect& rect, float by){
-    int new_w = rect.width * (1.0 + 2.0 * by); 
-    int new_h = rect.height * (1.0 + 2.0 * by); 
+int pointInRect(const Point& p, const Rect& r){
+    if((p.x >= r.x) && (p.y >= r.y)){
+        if((p.x <= (r.x + r.width)) && (p.y <= (r.y + r.height))){
+            return true;
+        }
+    }
+    return false;
+}
 
-    int new_x = rect.x - by * (float)rect.width; 
-    int new_y = rect.y - by * (float)rect.height; 
+Rect ImgProc::findSudokuROI(const vector<vector<Point> >& contours){
+    vector<Rect> rects(contours.size());
+    for(int i=0; i<contours.size(); i++){
+        rects[i] = boundingRect(contours[i]);
+    }
+
+    int minHits = 10;
+    int nHits = 0;
+    vector<pair<int, Rect> > result;
+    for(auto& rect : rects){
+        if(isSquare(rect)) {
+            nHits = 0;
+            for(auto& dot: houghIntersections){
+                nHits += pointInRect(dot, rect);
+            }
+            if(nHits >= minHits){
+                result.emplace_back(nHits, rect);
+            }
+        }
+    }
+    if(result.empty()){
+        cout << "No Sudoku square found!" << endl;
+        cout << "rects: " << endl;
+        for(auto & rect : rects){
+            cout << "    rect: " << rect << endl;
+        }
+        throw exception();
+    }
+
+    // sort in such a way that the first one the lowest area with most hits
+    sort(result.begin(), result.end(), [](auto &left, auto &right) {
+        return left.first >= right.first || (left.first == right.first && left.second.area() < right.second.area());
+    });
+
+    return result[0].second;
+}
+
+Rect ImgProc::expand(const Rect& rect, float by){
+    int new_w = rect.width * (1.0 + 2.0 * by);
+    int new_h = rect.height * (1.0 + 2.0 * by);
+
+    int new_x = rect.x - by * (float)rect.width;
+    int new_y = rect.y - by * (float)rect.height;
 
     return Rect(new_x, new_y, new_w, new_h);
 }
@@ -134,57 +188,179 @@ void ImgProc::crop(Mat& img, Mat& cropped, float by){
 
     Rect roi = Rect(new_x, new_y, new_w, new_h);
     cropped = img(roi);
-} 
+}
 
-int splitSudokuROI(const Rect& sudokuROI, vector<vector<Rect> >& smallROIs, vector<vector<Rect> >& cells){
+Rect maxRect(vector<Point2i>& points){
+    int minX=1e6, maxX=0, minY=1e6, maxY=0;
+    for(auto& p: points){
+        if(p.x < minX) minX = p.x;
+        if(p.y < minY) minY = p.y;
+        if(p.x > maxX) maxX = p.x;
+        if(p.y > maxY) maxY = p.y;
+    }
+    int w = maxX - minX;
+    int h = maxY - minY;
+    return Rect(minX, minY, w, h);
+}
+
+void ImgProc::splitSudokuROI(){
     /** 
      * The function takes sudokuROI and splits it into 3x3 and 9x9 grid by diving it into equal subsets
      */
-    int smallRoiHeight = (int)(sudokuROI.height / 3.0);
-    int smallRoiWidth = (int)(sudokuROI.width / 3.0);
     int cellHeight = (int)(sudokuROI.height / 9.0);
     int cellWidth = (int)(sudokuROI.width / 9.0);
-    for(int i_33=0; i_33<3; i_33++){
-        for(int j_33=0; j_33<3; j_33++){
-            int x = sudokuROI.x + i_33 * (int)(sudokuROI.width / 3.0);
-            int y = sudokuROI.y + j_33 * (int)(sudokuROI.height / 3.0);
-            Rect smallROI(x, y, smallRoiWidth, smallRoiHeight);
-            smallROIs[i_33][j_33] = smallROI;
-            for(int i=0; i<3; i++){
-                for(int j=0; j<3; j++){
-                    x = smallROI.x + i * (int)(smallROI.width / 3.0);
-                    y = smallROI.y + j * (int)(smallROI.height / 3.0);
-                    Rect cell(x, y, cellWidth, cellHeight);
-                    cells[i_33 * 3 + i][j_33 * 3 + j] = ImgProc::expand(cell);
+    int x, y;
+    for(int row=0; row<9; row++){
+        for(int col=0; col<9; col++){
+            x = sudokuROI.x + col * (int)(sudokuROI.width / 9.0);
+            y = sudokuROI.y + row * (int)(sudokuROI.height / 9.0);
+
+            Rect cell = Rect(x, y, cellWidth, cellHeight);
+            Rect expanded = ImgProc::expand(cell, 0.2);
+            vector<Point2i> intersectionsInCell;
+            for(auto& dot: kmeansIntersections){
+                if(pointInRect(dot, expanded)){
+                    intersectionsInCell.push_back(dot);
                 }
             }
+            sudokuCells[row][col] = maxRect(intersectionsInCell);
         }
     }
-   
-    return 0; 
 }
 
 // Main functions
 ImgProc::ImgProc(const Mat& img){
     origImg = img.clone();
-
-    smallROIs = vector<vector<cv::Rect> >(3, vector<cv::Rect>(3));
     sudokuCells = vector<vector<cv::Rect> >(9, vector<cv::Rect>(9));
 }
 
+bool isHorizontal(const Vec2f& line, double degThreshold=5){
+    double deg = line[1] / CV_PI * 180.0;
+    bool result = false;
+
+    if(180-degThreshold < deg && deg < 180+degThreshold){
+        result = true;
+    }
+    if(deg < degThreshold || deg > 360-degThreshold){
+        result = true;
+    }
+    return result;
+}
+
+bool isVertical(const Vec2f& line, double degThreshold=5){
+    double deg = line[1] / CV_PI * 180.0;
+    bool result = false;
+
+    if((90-degThreshold < deg && deg < 90+degThreshold)
+       || (270-degThreshold < deg && deg < 270+degThreshold)){
+        result = true;
+    }
+    return result;
+}
+
+bool isHorizontalOrVertical(const Vec2f& line, double degThreshold=5){
+    return isHorizontal(line, degThreshold) || isVertical(line, degThreshold);
+}
+
+void drawLines(const Mat& cdst, const vector<Vec2f>& lines){
+    // Draw the lines
+    for(const auto & i : lines){
+        float rho = i[0], theta = i[1];
+        // printf("Rho = %.4f, Theta = %.4f \n", rho, theta);
+
+        Point pt1, pt2;
+        double a = cos(theta), b = sin(theta);
+        double x0 = a * rho, y0 = b * rho;
+        pt1.x = cvRound(x0 + 1000 * (-b));
+        pt1.y = cvRound(y0 + 1000 * (a));
+        pt2.x = cvRound(x0 - 1000 * (-b));
+        pt2.y = cvRound(y0 - 1000 * (a));
+        // B G R
+        // Scalar c(0, 0, 255);
+        Scalar c(255);
+        line(cdst, pt1, pt2, c, 1, LINE_AA);
+    }
+}
+
+
+Point2f lineIntersection(const Vec2f& line1, const Vec2f& line2) {
+    // See https://stackoverflow.com/questions/383480/intersection-of-two-lines-defined-in-rho-theta-parameterization/383527#383527
+    float rho1 = line1[0], theta1 = line1[1];
+    float rho2 = line2[0], theta2 = line2[1];
+
+    float a = cos(theta1);
+    float b = sin(theta1);
+    float c = cos(theta2);
+    float d = sin(theta2);
+
+    float det = 1.0 / (a * d - b * c);
+
+    float x = det * (d * rho1 - b * rho2);
+    float y = det * (-c * rho1 + a * rho2);
+
+    return Point2f(x, y);
+}
+
+void ImgProc::calcHoughIntersections(){
+    vector<Vec2f*> horizontal;
+    vector<Vec2f*> vertical;
+    for(auto& line: houghLines){
+        if(isHorizontal(line)) horizontal.push_back(&line);
+        if(isVertical(line)) vertical.push_back(&line);
+    }
+
+    houghIntersections.clear();
+    for(auto& hor: horizontal){
+        for(auto& ver: vertical){
+            houghIntersections.push_back(lineIntersection(*hor, *ver));
+        }
+    }
+}
+
+Mat ImgProc::houghExtraction(Mat& img){
+    Mat houghImg = Mat::zeros(img.size(), img.type());
+
+    int smallerSize = min(img.size().height, img.size().width);
+    int houghThreshold = (float)smallerSize * 0.75;
+
+    HoughLines(img, houghLines, 1, CV_PI/180, houghThreshold, 0, 0 );
+    // drop all diagonal lines
+    for(auto it = houghLines.begin(); it != houghLines.end();){
+        if(!isHorizontalOrVertical(*it)){
+            it = houghLines.erase(it);
+        } else{
+            ++it;
+        }
+    }
+    calcHoughIntersections();
+
+    drawLines(houghImg, houghLines);
+    imshow("HoughLines", houghImg);
+
+    Mat invAndHough;
+    img.copyTo(invAndHough, houghImg);
+    return invAndHough;
+}
+
+
 void ImgProc::processImg(){
     Mat inv = invertImg(this->origImg);
-    // imshow("invert_image", inv);
-    Mat eroded = erosion(inv);
-    // imshow("eroded", eroded);
+    imshow("inverted img", inv);
 
-    Mat cannyImg = cannyEdge(eroded);
-    imshow("cannyImg", cannyImg);
+    Mat houghImg = houghExtraction(inv);
+    imshow("houghImg", houghImg);
 
-    Mat dilatedImg = dilation(cannyImg);
-    imshow("dilatedImg", dilatedImg);
+//    Mat drawing;
+//    cvtColor(houghImg, drawing, COLOR_GRAY2RGB);
+//    for(Point2i& dot: kmeansIntersections){
+//        cv::Scalar color(0, 0, 255);
+//        circle(drawing, dot, 1, color, 2);
+//    }
+//    cv::namedWindow("intersections", cv::WINDOW_NORMAL | cv::WINDOW_KEEPRATIO | cv::WINDOW_GUI_EXPANDED);
+//    imshow("intersections", drawing);
+    waitKey(0);
 
-    processedImg = dilatedImg;
+    processedImg = houghImg;
 }
 
 void ImgProc::findSudokuGrid(){
@@ -195,31 +371,52 @@ void ImgProc::findSudokuGrid(){
 
     Mat origColored;
     cvtColor(origImg, origColored, COLOR_GRAY2RGB);
-    for(auto & contour : contours){
-        Rect rect = boundingRect(contour);
-        cv::Scalar color(rand()*255, rand()*255, rand()*255);
-        rectangle(origColored, rect, color, 1);
-    }
+//    for(auto & contour : contours){
+//        Rect rect = boundingRect(contour);
+//        if(isSquare(rect)) {
+//            cv::Scalar color(rand() * 255, rand() * 255, rand() * 255);
+//            rectangle(origColored, rect, color, 2);
+//        }
+//    }
 
-    vector<Rect> sudokuROIs = findSudokuROIs(contours, hierarchy);
-    // best sudoku ROI is the one with most plausible children
-    this->sudokuROI = sudokuROIs[sudokuROIs.size()-1];
+    this->sudokuROI = findSudokuROI(contours);
+
+    vector<Point2f> sudokuIntersections;
+    for(auto& inter: houghIntersections){
+        if(pointInRect(inter, this->sudokuROI))
+            sudokuIntersections.push_back(inter);
+    }
+    Mat bestLabels;//, centers;
+    vector<Point2f> centers;
+    TermCriteria criteria;
+    criteria.type = TermCriteria::Type::MAX_ITER;
+    criteria.maxCount = 20;
+    kmeans(sudokuIntersections, 100, bestLabels, criteria, 1, KMEANS_PP_CENTERS, centers);
+    for(auto& c: centers){
+        kmeansIntersections.emplace_back((int) c.x, (int) c.y);
+    }
         
     // B G R
     cv::Scalar colorOfBigSquare(255, 0, 0);
-    rectangle(origColored, this->sudokuROI, colorOfBigSquare, 5);
-    imshow("rectangle", origColored);
+    rectangle(origColored, this->sudokuROI, colorOfBigSquare, 2);
+    imshow("Sudoku Puzzle ROI", origColored);
 
-    splitSudokuROI(this->sudokuROI, this->smallROIs, this->sudokuCells);
+    for(Point2i& dot: kmeansIntersections){
+        cv::Scalar color(0, 0, 255);
+        circle(origColored, dot, 1, color, 2);
+    }
+    cv::namedWindow("intersections", cv::WINDOW_NORMAL | cv::WINDOW_KEEPRATIO | cv::WINDOW_GUI_EXPANDED);
+    imshow("intersections", origColored);
+
+    splitSudokuROI();
 
     cv::Scalar colorOfCell(0, 255, 0);
     for(int i=0; i<9; i++){
         for(int j=0; j<9; j++){
-            rectangle(origColored, sudokuCells[i][j], colorOfCell, 2);
-            
+            rectangle(origColored, sudokuCells[i][j], colorOfCell, 1);
         }
     }
-    imshow("cells", origColored);
+    imshow("Sudoku cells", origColored);
 
     waitKey(0);
 
