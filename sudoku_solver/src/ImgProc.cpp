@@ -184,7 +184,7 @@ void ImgProc::processImg(){
 
 Rect ImgProc::locateSudokuROI(const vector<vector<Point>> &contours){
     vector<Rect> rects(contours.size());
-    for(int i=0; i<contours.size(); i++){
+    for(std::size_t i=0; i<contours.size(); i++){
         rects[i] = boundingRect(contours[i]);
     }
 

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <omp.h>
 
 #include <opencv4/opencv2/core.hpp>
 #include <opencv4/opencv2/imgproc.hpp>
@@ -184,7 +185,7 @@ int main(int argc, char *argv[]){
                 cout << "Possible digits: " << recognizedDigits[0] << " and " << recognizedDigits[1] << " and " << recognizedDigits[2] << endl;
                 vector<Sudoku> newPossibleGames = vector<Sudoku>();
                 for(auto & possibleGame : possibleGames){
-                    for(int p=1; p<recognizedDigits.size(); p++){
+                    for(size_t p=1; p<recognizedDigits.size(); p++){
                         Sudoku newGame(possibleGame);
                         newGame.fill(i, j, recognizedDigits[p].first, recognizedDigits[p].second);
                         newPossibleGames.push_back(newGame);
@@ -199,14 +200,14 @@ int main(int argc, char *argv[]){
     cout << "N total games " <<  possibleGames.size() << endl;
     //destroyAllWindows();
 
-    #pragma omp parallel for
-    for(int i=0; i<possibleGames.size(); i++){
+    #pragma omp parallel for num_threads(2)
+    for(size_t i=0; i<possibleGames.size(); i++){
         if(possibleGames[i].isValid())
             possibleGames[i].solve();
     }
 
     cout << "********** Solved Games **********" << endl;
-    for(int i=0; i<possibleGames.size(); i++){
+    for(size_t i=0; i<possibleGames.size(); i++){
         if(!possibleGames[i].isSolved()) continue;
         possibleGames[i].print();
         cout << endl;

@@ -42,7 +42,7 @@ nn::Sequential MnistModel::getModel(){
 }
 
 template <typename DataLoader>
-void MnistModel::trainEpoch(int32_t epoch, nn::Sequential& model, DataLoader& data_loader, optim::Optimizer& optimizer,
+void MnistModel::trainEpoch(int epoch, nn::Sequential& model, DataLoader& data_loader, optim::Optimizer& optimizer,
     size_t dataset_size){
     model->train();
     size_t batch_idx = 0;
@@ -113,7 +113,7 @@ void MnistModel::trainModel(){
     auto test_loader =
         torch::data::make_data_loader(std::move(test_dataset), testBatchSize);
 
-    for (size_t epoch = 1; epoch <= numberOfEpochs; ++epoch) {
+    for (int epoch = 1; epoch <= numberOfEpochs; ++epoch) {
         cout << "Epoch: " << epoch << endl;
         trainEpoch(epoch, net, *train_loader, optimizer, train_dataset_size);
         test(net, *test_loader, test_dataset_size);

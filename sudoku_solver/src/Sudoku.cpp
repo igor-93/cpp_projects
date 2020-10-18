@@ -3,7 +3,7 @@
 using namespace std;
 
 // helpers
-bool findNextCell(const vector<vector<int> >& grid, int& row, int& col){
+inline bool findNextCell(const vector<vector<int> >& grid, int& row, int& col){
     for (row = 0; row < Sudoku::N; row++) 
         for (col = 0; col < Sudoku::N; col++) 
             if (grid[row][col] == UNASSIGNED) 
@@ -11,7 +11,7 @@ bool findNextCell(const vector<vector<int> >& grid, int& row, int& col){
     return false; 
 }
 
-bool isValidEntry(const vector<vector<int> >& grid, int row, int col, int value){
+inline bool isValidEntry(const vector<vector<int> >& grid, int row, int col, int value){
     // check row
     for(int c=0; c<Sudoku::N; c++)
         if(c != col && grid[row][c] == value)
@@ -57,7 +57,7 @@ Sudoku::Sudoku(const Sudoku& other){
 }
 
 bool Sudoku::fill(int row, int col, int value, double probability){
-    if(this->grid[row][col] < 1 && value < 10 & value > 0){
+    if((this->grid[row][col] < 1) && (value < 10) & (value > 0)){
         this->grid[row][col] = value;
         this->probabilities[row][col] = probability;
         return true;
