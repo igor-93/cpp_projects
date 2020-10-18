@@ -15,11 +15,12 @@ class Sudoku{
     public:
         Sudoku();
         explicit Sudoku(vector<vector <int> >& grid);
-        Sudoku(const Sudoku& other);
+        explicit Sudoku(const Sudoku& other);
         bool operator==(const Sudoku& other);
         bool fill(int row, int col, int value, double probability = UNASSIGNED);
         double getJoinProbability() const ;
         bool isValid() const;
+        bool isSolved() const {return this->solved;};
         bool solve();
 
         void print() const;
@@ -28,7 +29,7 @@ class Sudoku{
         float getProb(int row, int col) const {return probabilities[row][col];};
 
         bool trySolve(vector<vector<int> >& grid);
-        static const int N;
+        static const int N = 9;
 
     private:
         bool solved;

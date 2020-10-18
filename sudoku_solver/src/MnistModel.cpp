@@ -4,23 +4,12 @@ using namespace std;
 using namespace torch;
 
 
-const int MnistModel::trainBatchSize = 64;
-const int MnistModel::testBatchSize = 512;
-const int MnistModel::numberOfEpochs = 10; // 50
-const int MnistModel::logInterval = 10;
-const int MnistModel::nClasses = 10;
-const float MnistModel::dataMean = 0.1307;
-const float MnistModel::dataStd = 0.3081;
-const float MnistModel::acceptanceThreshold = 0.8;
-
 MnistModel::MnistModel() {
     if (torch::cuda::is_available()) {
         cout << "CUDA is available! Training on GPU." << endl;
         device = Device(c10::DeviceType::CUDA);
     }
-
     net = getModel();
-
     readyForInference = false;
 }
 

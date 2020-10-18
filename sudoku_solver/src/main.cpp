@@ -35,7 +35,7 @@ void testSudoku(){
 
 
 void testMnist(){
-    MnistModel m = MnistModel();
+    MnistModel& m = MnistModel::getInstance();
     m.testLibTorch();
 }
 
@@ -125,7 +125,7 @@ int main(int argc, char *argv[]){
 
     cout << "Instantiating processor and neural-net..." << endl;
     ImgProc processor(img);
-    MnistModel model = MnistModel();
+    MnistModel& model = MnistModel::getInstance();
     // model.trainModel();
 
     cout << "Running image processor...";
@@ -172,7 +172,7 @@ int main(int argc, char *argv[]){
             // drop zeros since sudoku doesnt have them definitely
             for(auto it = recognizedDigits.begin(); it != recognizedDigits.end();){
                 if((*it).first == 0) it = recognizedDigits.erase(it); 
-                else ++it;
+                else it = next(it);
             }
 
             if(recognizedDigits[0].second >= MnistModel::acceptanceThreshold){
@@ -199,33 +199,20 @@ int main(int argc, char *argv[]){
     cout << "N total games " <<  possibleGames.size() << endl;
     //destroyAllWindows();
 
-    // remove invalid grids
-    for(auto it = possibleGames.begin(); it != possibleGames.end();){
-        if(!(*it).isValid()){
-            it = possibleGames.erase(it); 
-        } else{
-            ++it;
-        }
-    }
-    cout << "N valid games " <<  possibleGames.size() << endl;
-    possibleGames.erase( unique( possibleGames.begin(), possibleGames.end() ), possibleGames.end() );
-    cout << "N dedup valid games " <<  possibleGames.size() << endl;
-    vector<Sudoku*> solvedGames;
-    for(auto it = possibleGames.begin(); it != possibleGames.end();){
-        bool solved = (*it).solve();
-        if(solved){
-            solvedGames.push_back(&(*it));
-        }
-        ++it;
+    #pragma omp parallel for
+    for(int i=0; i<possibleGames.size(); i++){
+        if(possibleGames[i].isValid())
+            possibleGames[i].solve();
     }
 
     cout << "********** Solved Games **********" << endl;
-    for(int i=0; i<solvedGames.size(); i++){
-        solvedGames[i]->print();
+    for(int i=0; i<possibleGames.size(); i++){
+        if(!possibleGames[i].isSolved()) continue;
+        possibleGames[i].print();
         cout << endl;
 
         Mat drawing;
-        drawResult(img, drawing, sudokuGrid, *(solvedGames[i]));
+        drawResult(img, drawing, sudokuGrid, possibleGames[i]);
 
         stringstream title;
         title << "Result " << i;

@@ -14,7 +14,14 @@
 class MnistModel{
 
     public:
-        MnistModel();
+        static MnistModel& getInstance(){
+            static MnistModel instance; // Guaranteed to be destroyed and instantiated on first use.
+            return instance;
+        }
+
+        MnistModel(MnistModel const&) = delete;
+        void operator=(MnistModel const&) = delete;
+
         void testLibTorch();
         void trainModel();
         std::vector<std::pair<int, float> > inferClass(const cv::Mat& digit);
@@ -22,18 +29,20 @@ class MnistModel{
         static cv::Mat convertImg(torch::Tensor input);
         static torch::Tensor convertImg(const cv::Mat& input);
 
-        static const int trainBatchSize;
-        static const int testBatchSize;
-        static const int numberOfEpochs;
-        static const int logInterval;
-        static const int nClasses;
-
-        static const float dataMean;
-        static const float dataStd;
-
-        static const float acceptanceThreshold;
+        constexpr static const float acceptanceThreshold = 0.8f;
 
     private:
+        MnistModel();
+
+        const int trainBatchSize = 64;
+        const int testBatchSize = 512;
+        const int numberOfEpochs = 10;
+        const int logInterval= 10;
+        const int nClasses = 10;
+
+        const float dataMean = 0.1307f;
+        const float dataStd = 0.3081f;
+
         const std::string dataPath = "./mnist";
         const std::string modelPath = "./model.pt";
         torch::Device device = torch::Device(c10::DeviceType::CPU);

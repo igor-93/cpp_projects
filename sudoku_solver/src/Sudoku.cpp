@@ -13,37 +13,27 @@ bool findNextCell(const vector<vector<int> >& grid, int& row, int& col){
 
 bool isValidEntry(const vector<vector<int> >& grid, int row, int col, int value){
     // check row
-    for(int c=0; c<Sudoku::N; c++){
-        if(c != col && grid[row][c] == value){
-            //cout << "same value ("<< value << ") found in the row " << row << endl;
+    for(int c=0; c<Sudoku::N; c++)
+        if(c != col && grid[row][c] == value)
             return false;
-        }
-            
-    }
+
     // check column
-    for(int r=0; r<Sudoku::N; r++){
-        if(r != row && grid[r][col] == value){
-            //cout << "same value ("<< value << ") found in the column " << col << endl;
+    for(int r=0; r<Sudoku::N; r++)
+        if(r != row && grid[r][col] == value)
             return false;
-        }
-    }
+
     // check small box
     int smallBoxR = row / 3;
     int smallBoxC = col / 3;
-    for(int r=smallBoxR*3; r<(smallBoxR+1)*3; r++){
-        for(int c=smallBoxC*3; c<(smallBoxC+1)*3; c++){
-            if((r != row && c != col) && grid[r][c] == value){
-                //cout << "same value ("<< value << ") found in the small square: " << r << ", " << c << endl;
+    for(int r=smallBoxR*3; r<(smallBoxR+1)*3; r++)
+        for(int c=smallBoxC*3; c<(smallBoxC+1)*3; c++)
+            if((r != row && c != col) && grid[r][c] == value)
                 return false;
-            }
-                
-        }
-    }
+
     return true;
 }
 
 // members
-const int Sudoku::N = 9;
 
 Sudoku::Sudoku(){
     this->solved = false;
@@ -88,12 +78,10 @@ double Sudoku::getJoinProbability() const {
 }
 
 bool Sudoku::isValid() const {
-    for(int row = 0; row < Sudoku::N; row++){
-        for(int col = 0; col < Sudoku::N; col++){
+    for(int row = 0; row < Sudoku::N; row++)
+        for(int col = 0; col < Sudoku::N; col++)
             if(grid[row][col] != UNASSIGNED && !isValidEntry(grid, row, col, grid[row][col]))
                 return false;
-        }
-    }
     return true;
 }
 
@@ -105,12 +93,13 @@ bool Sudoku::solve(){
         throw exception();
     }
     if(this->solved)
-        this->grid;
+        return true;
 
     this->nIters =0;
+    cout << "Solving Sudoku ...";
     this->solved = this->trySolve(this->grid);
 
-    cout << "Ran in " << this->nIters << " iterations." << endl;
+    cout << " done! Ran in " << this->nIters << " iterations." << endl;
     return this->solved;
 }
 
@@ -144,9 +133,9 @@ void Sudoku::print() const {
             else
                 cout << val << " "; 
         }
-            
-        cout << endl; 
-    } 
+        cout << '\n';
+    }
+    flush(cout);
 } 
 
 bool Sudoku::operator==(const Sudoku& other){
