@@ -13,9 +13,16 @@ using namespace std;
 class Sudoku{
 
     public:
-        Sudoku();
-        explicit Sudoku(vector<vector <int> >& grid);
+        // default constructor
+        Sudoku() = default;
+        // conversion constructor
+        explicit Sudoku(vector<vector <int> >& grid): grid(grid) {};
+        // explicit copy-constructor
         explicit Sudoku(const Sudoku& other);
+        // move constructor
+        Sudoku(Sudoku &&) = default;
+        // move assignment is necessary when defining move constructor
+        Sudoku& operator=( Sudoku && ) = default;
         bool operator==(const Sudoku& other);
         bool fill(int row, int col, int value, double probability = UNASSIGNED);
         double getJoinProbability() const ;
@@ -32,10 +39,10 @@ class Sudoku{
         static const int N = 9;
 
     private:
-        bool solved;
-        int nIters;
-        vector<vector<int> > grid;
-        vector<vector<double> > probabilities;
+        bool solved{false};
+        int nIters{0};
+        vector<vector<int> > grid = vector<vector <int> >(N, vector<int>(N, UNASSIGNED));
+        vector<vector<double> > probabilities = vector<vector <double> >(N, vector<double>(N, UNASSIGNED));
 
 };
 

@@ -188,11 +188,16 @@ int main(int argc, char *argv[]){
                     for(size_t p=1; p<recognizedDigits.size(); p++){
                         Sudoku newGame(possibleGame);
                         newGame.fill(i, j, recognizedDigits[p].first, recognizedDigits[p].second);
-                        newPossibleGames.push_back(newGame);
+                        newPossibleGames.emplace_back(move(newGame));
                     }
                     possibleGame.fill(i, j, recognizedDigits[0].first, recognizedDigits[0].second);
                 }
-                possibleGames.insert(possibleGames.end(), newPossibleGames.begin(), newPossibleGames.end() );
+                // concat vectors without copy
+                possibleGames.insert(
+                        possibleGames.end(),
+                        make_move_iterator(newPossibleGames.begin()),
+                        make_move_iterator(newPossibleGames.end()));
+
             }
             //waitKey(0);
         }

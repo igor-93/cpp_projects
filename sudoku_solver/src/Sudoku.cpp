@@ -35,19 +35,19 @@ inline bool isValidEntry(const vector<vector<int> >& grid, int row, int col, int
 
 // members
 
-Sudoku::Sudoku(){
-    this->solved = false;
-    this->grid = vector<vector <int> >(N, vector<int>(N, -1));
-    this->probabilities = vector<vector <double> >(N, vector<double>(N, UNASSIGNED));
-    this->nIters = 0;
-}
+//Sudoku::Sudoku(){
+//    this->solved = false;
+//    this->grid = vector<vector <int> >(N, vector<int>(N, UNASSIGNED));
+//    this->probabilities = vector<vector <double> >(N, vector<double>(N, UNASSIGNED));
+//    this->nIters = 0;
+//}
 
-Sudoku::Sudoku(vector<vector <int> >& grid){
-    this->solved = false;
-    this->grid = grid;
-    this->probabilities = vector<vector <double> >(N, vector<double>(N, UNASSIGNED));
-    this->nIters = 0;
-}
+//Sudoku::Sudoku(vector<vector <int> >& grid){
+//    this->solved = false;
+//    this->grid = grid;
+//    this->probabilities = vector<vector <double> >(N, vector<double>(N, UNASSIGNED));
+//    this->nIters = 0;
+//}
 
 Sudoku::Sudoku(const Sudoku& other){
     this->solved = other.solved;
