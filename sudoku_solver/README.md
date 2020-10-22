@@ -15,16 +15,16 @@ Tiny program that solves Sudoko that it sees on the image. It comprises of few m
     - remove the potential "frame" of the ROI of the cell by flood-filling the edges
     - discard if nothing inside (neural-net is not trained to infer non-digit)
 1. Recognize the digit:
-    - simple CNN with 2 conv layers and 2 fully-connected
-    - pick top 3
-    - if the first has prob > 80%, discard other 2 options, otherwise consider all 3 options
+    - simple CNN with 2 conv and 2 fully-connected layers
+    - pick the top 3 classes
+    - if the first has prob > 80%, discard other 2 classes, otherwise consider all 3
 1. Solve Sudoku puzzle:
     - discard all invalid starting puzzles
-    - solve others with depth-first search algorithm
-    - discard all that don't have solution
+    - solve others with the depth-first search algorithm
+    - discard all that don't have a solution
 1. Overlay inferred digits and fill in the blank cells
 
-**ATTENTION: this is MVP version, meaning that each part works, but there is still lots of space for improvement.**
+**ATTENTION: this is the MVP version, meaning that each part works, but there is still lots of space for improvement.**
 
 ### Example 
 
